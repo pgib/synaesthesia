@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <string.h>
+#include <ctype.h>
 #include "syna.h"
 #include <SDL.h>
 #if defined(EMSCRIPTEN) && !SDL_VERSION_ATLEAST(2,0,0)
@@ -209,7 +210,6 @@ bool SdlScreen::init(int xHint,int yHint,int width,int height,bool fullscreen,
 
   createSurface();
 
-// FIXME: There is no keyboard input with SDL2
 #if !SDL_VERSION_ATLEAST(2,0,0)
   SDL_EnableUNICODE(1);
 #endif
@@ -233,6 +233,7 @@ void SdlScreen::toggleFullScreen(void) {
 
 void SdlScreen::inputUpdate(int &mouseX,int &mouseY,int &mouseButtons,char &keyHit) {    
   SDL_Event event;
+  const char *keyname;
 
   keyHit = 0;
   
@@ -283,7 +284,20 @@ void SdlScreen::inputUpdate(int &mouseX,int &mouseY,int &mouseButtons,char &keyH
           break;
         }
         break;
-#else
+
+      case SDL_KEYDOWN:
+	keyname = SDL_GetKeyName(event.key.keysym.sym);
+        if (keyname[0] == 0) {
+          break;
+        } else if (keyname[1] == 0) {
+	  keyHit = keyname[0];
+        } else if (strncmp(keyname, "Keypad ", 7) &&
+                   keyname[7] != 0 && keyname[8] == 0) {
+          keyHit = keyname[7];
+        }
+        keyHit = tolower(keyHit);
+        break;
+#else // !SDL_VERSION_ATLEAST(2,0,0)
       case SDL_ACTIVEEVENT :
         /* Lost focus, hide mouse */
         if (!event.active.gain) {
